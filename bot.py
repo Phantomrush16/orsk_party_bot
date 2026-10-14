@@ -5,8 +5,8 @@ import time
 from telebot import types
 
 # ==== НАСТРОЙКИ ====
-BOT_TOKEN = os.environ.get('TELEGRAM_BOT_TOKEN')  # Токен берем из переменных Railway
-ADMIN_ID = int(os.environ.get('BOT_ADMIN_ID', 0))  # Твой ID тоже из переменных
+BOT_TOKEN = os.environ.get('TELEGRAM_BOT_TOKEN')
+ADMIN_ID = int(os.environ.get('BOT_ADMIN_ID', 0))
 
 if not BOT_TOKEN:
     print("ОШИБКА: TELEGRAM_BOT_TOKEN не установлен!")
@@ -62,6 +62,13 @@ def send_broadcast(message):
         bot.send_message(message.chat.id, "Напиши текст афиши после команды /send")
         return
 
+    # ===== ОЧИЩАЕМ СТАРЫЕ ОТВЕТЫ ПЕРЕД НОВОЙ РАССЫЛКОЙ =====
+    conn = sqlite3.connect('subscribers.db')
+    cursor = conn.cursor()
+    cursor.execute('DELETE FROM answers')  # Удаляем все старые ответы
+    conn.commit()
+    conn.close()
+
     markup = types.InlineKeyboardMarkup(row_width=3)
     btn_yes = types.InlineKeyboardButton("✅ Приду", callback_data="answer_yes")
     btn_maybe = types.InlineKeyboardButton("🤔 Подумаю", callback_data="answer_maybe")
@@ -78,7 +85,7 @@ def send_broadcast(message):
         except Exception as e:
             print(f"Ошибка у {user[0]}: {e}")
 
-    bot.send_message(message.chat.id, f"✅ Рассылка отправлена {success} из {len(users)}.")
+    bot.send_message(message.chat.id, f"✅ Новая афиша отправлена {success} из {len(users)}. Статистика обнулена.")
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith('answer_'))
 def handle_answer(call):
@@ -116,7 +123,7 @@ def stats(message):
     
     bot.send_message(
         message.chat.id,
-        f"📊 СТАТИСТИКА\n\n👥 Подписчиков: {total_users}\n\n✅ Приду: {yes}\n🤔 Подумаю: {maybe}\n❌ Не смогу: {no}"
+        f"📊 СТАТИСТИКА ПОСЛЕДНЕЙ АФИШИ\n\n👥 Подписчиков: {total_users}\n\n✅ Приду: {yes}\n🤔 Подумаю: {maybe}\n❌ Не смогу: {no}"
     )
 
 # ==== ЗАПУСК ====
